@@ -5,8 +5,8 @@
 
 
 #include <algorithm>
-#include <cstdlib>
 #include <iostream>
+#include <list>
 #include <regex>
 #include <stack>
 #include <string>
@@ -51,7 +51,7 @@ struct ClosureInfo{
 	bool has_return;
 };
 
-typedef std::vector<Token> Line;
+typedef std::list<Token> Line;
 typedef std::vector<Line> Group;
 
 struct Program{
@@ -67,6 +67,7 @@ struct Program{
 };
 
 typedef std::regex_iterator<std::string::iterator> rgx_it;
+typedef std::list<Token>::iterator CodePos;
 
 /**
 *	Program tokenize(std::string)
@@ -76,5 +77,7 @@ typedef std::regex_iterator<std::string::iterator> rgx_it;
 Program tokenize(std::string program);
 
 std::ostream& operator<<(std::ostream& os, Program prog);
+
+void syntax_error(Token tok, const char* msg);
 
 #endif

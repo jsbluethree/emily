@@ -17,14 +17,14 @@ int Program::intern(std::string str){
  *	outputs a structure representing the program
  */
 Program tokenize(std::string program){
-	using namespace std;	
+	using namespace std;
 	// set up program data structure
-	Program prog;
+	Program prog{};
 	prog.groups.push_back(Group{});
 	prog.groups.back().push_back(Line{});
 	prog.group_kinds.push_back('(');
 	// initialize with keywords
-	prog.words.assign(keywords, keywords + kw_num);
+	prog.words = keywords;
 	// set up stack to track current group index
 	stack<int> curr_group{};
 	curr_group.push(0);
@@ -35,9 +35,7 @@ Program tokenize(std::string program){
 	// for each regex match, test the length of each submatch
 	// nonzero submatch length indicates the type of token matched
 	for (rgx_it rit{ program.begin(), program.end(), em_rgx }, rend{}; rit != rend; ++rit){
-		Token tok{};
-		tok.line = line_number;
-		tok.column = rit->position() - line_offset;
+		Token tok{ -1, -1, line_number, rit->position() - line_offset };
 		if ((*rit)[Tok::HexNumber].length() > 0){
 			tok.type = Tok::Number;
 			tok.index = prog.numbers.size();
@@ -101,7 +99,7 @@ Program tokenize(std::string program){
 			// TODO: check that the group closer matches (impossible with the current setup?)
 			// TODO: check that the group closer is matched (stack.size() > 1)
 			if (curr_group.size() <= 1){
-				printf("unmatched group closer");
+				syntax_error(tok, "unmatched group closer");
 				return{};
 			}
 			curr_group.pop();
@@ -120,46 +118,50 @@ Program tokenize(std::string program){
 			line_offset = rit->position() + rit->length();
 		}
 		else if ((*rit)[Tok::Unrecognized].length() > 0){
-			printf("unrecognized character");
+			syntax_error(tok, "unrecognized character");
 			return{};
 		}
 		// for other cases, do nothing
 	}
 	// make sure all groups were closed
 	if (curr_group.size() > 1){
-		printf("unmatched group opener");
+		syntax_error(prog.groups[curr_group.top()].front().front(), "unmatched group opener");
 		return{};
 	}
 	return prog;	
 }
 
 std::ostream& operator<<(std::ostream& os, Program prog){
-	for (unsigned int g = 0; g < prog.groups.size(); ++g){
-		os << g << ":\n";
-		for (unsigned int ln = 0; ln < prog.groups[g].size(); ++ln){
-			for (unsigned int tk = 0; tk < prog.groups[g][ln].size(); ++tk){
-				Token tok = prog.groups[g][ln][tk];
-				switch (tok.type){
+	int g = 0;
+	for (const auto& group : prog.groups){
+		os << g++ << ":\n";
+		for (const auto& ln : group){
+			for (auto tk : ln){
+				switch (tk.type){
 				case Tok::Number:
-					os << prog.numbers[tok.index];
+					os << prog.numbers[tk.index];
 					break;
 				case Tok::String:
-					os << '"' << prog.strings[tok.index] << '"';
+					os << '"' << prog.strings[tk.index] << '"';
 					break;
 				case Tok::Symbol:
-					os << prog.symbols[tok.index];
+					os << prog.symbols[tk.index];
 					break;
 				case Tok::Atom:
 					os << '.';
 				case Tok::Word:
-					os << prog.words[tok.index];
+					os << prog.words[tk.index];
 					break;
 				case Tok::GroupOpen:
-					os << prog.group_kinds[tok.index] << tok.index;
+					os << prog.group_kinds[tk.index] << tk.index;
 					break;
 				case Tok::GroupClose:
-					os << '^' << prog.group_kinds[prog.closures[tok.index].group_idx] << tok.index;
-				default:break;
+					os << '^' << prog.group_kinds[prog.closures[tk.index].group_idx]
+					   << prog.closures[tk.index].group_idx;
+					break;
+				default:
+					os << "!ERROR!";
+					break;
 				}
 				os << ' ';
 			}
@@ -167,4 +169,8 @@ std::ostream& operator<<(std::ostream& os, Program prog){
 		}
 	}
 	return os;
+}
+
+void syntax_error(Token tok, const char* msg){
+	std::cerr << "Syntax Error at (" << tok.line << ',' << tok.column << "): " << msg << std::endl;
 }

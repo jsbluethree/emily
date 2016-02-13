@@ -64,7 +64,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="keywords.cpp" />
     <ClCompile Include="macro.cpp" />
     <ClCompile Include="tokenize.cpp" />
     <ClCompile Include="main.cpp" />
