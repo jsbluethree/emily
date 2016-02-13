@@ -3,6 +3,14 @@
 
 #include "tokenize.h"
 
+// interns a string, returning its index
+int Program::intern(std::string str){
+	int i = std::find(words.begin(), words.end(), str) - words.begin();
+	if (i == words.size())
+		words.push_back(str);
+	return i;
+}
+
 /**
  *	Program tokenize(std::string)
  *	takes a string containing the program to be tokenized
@@ -15,6 +23,8 @@ Program tokenize(std::string program){
 	prog.groups.push_back(Group{});
 	prog.groups.back().push_back(Line{});
 	prog.group_kinds.push_back('(');
+	// initialize with keywords
+	prog.words.assign(keywords, keywords + kw_num);
 	// set up stack to track current group index
 	stack<int> curr_group{};
 	curr_group.push(0);
@@ -56,14 +66,13 @@ Program tokenize(std::string program){
 		}
 		else if ((*rit)[Tok::Word].length() > 0){
 			tok.type = Tok::Word;
-			tok.index = prog.words.size();
-			prog.words.push_back(rit->str());
+			tok.index = prog.intern(rit->str());
 			prog.groups[curr_group.top()].back().push_back(tok);
 		}
 		else if ((*rit)[Tok::String].length() > 0){
 			tok.type = Tok::String;
 			tok.index = prog.strings.size();
-			prog.strings.push_back((*rit)[Tok::String].str());
+			prog.strings.push_back((*rit)[Tok::StringContent].str());
 			// check for newlines
 			int nls = count(rit->begin(), rit->end(), '\n');
 			if (nls > 0){
@@ -140,6 +149,8 @@ std::ostream& operator<<(std::ostream& os, Program prog){
 				case Tok::Symbol:
 					os << prog.symbols[tok.index];
 					break;
+				case Tok::Atom:
+					os << '.';
 				case Tok::Word:
 					os << prog.words[tok.index];
 					break;
@@ -147,7 +158,7 @@ std::ostream& operator<<(std::ostream& os, Program prog){
 					os << prog.group_kinds[tok.index] << tok.index;
 					break;
 				case Tok::GroupClose:
-					os << prog.closures[tok.index].group_kind << tok.index;
+					os << '^' << prog.group_kinds[prog.closures[tok.index].group_idx] << tok.index;
 				default:break;
 				}
 				os << ' ';

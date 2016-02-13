@@ -11,6 +11,7 @@
 #include <stack>
 #include <string>
 #include <vector>
+#include "keywords.h"
 
 const char emily_regex[] { R"*(((0x[0-9a-fA-F]+)|(?:0o([0-7]+))|(?:0b([01]+))|(\.\d+|\d+(?:\.\d*)?(?:[eE][+-]?\d+)?))|([a-zA-Z][a-zA-Z0-9]*)|("((?:\\"|[^"])*)")|([\[\({])|([\]\)}])|([\n;])|(#[^\n]*)|(\\version\s\d+\.\d+)|(\\(?:\s|#[^\n]*)*\n)|([^\(\)\[\]{}\\;\"\w\s]+)|([ \t\r\f\v]+)|(.))*" };
 
@@ -32,7 +33,8 @@ namespace Tok{
 		LineStitch,
 		Symbol,
 		Whitespace,
-		Unrecognized
+		Unrecognized,
+		Atom
 	};
 }
 
@@ -46,7 +48,6 @@ struct Token{
 struct ClosureInfo{
 	std::vector<std::string> bindings;
 	int group_idx;
-	char group_kind;
 	bool has_return;
 };
 
@@ -61,10 +62,17 @@ struct Program{
 	std::vector<std::string> words;
 	std::vector<char> group_kinds;
 	std::vector<ClosureInfo> closures;
+
+	int intern(std::string str);
 };
 
 typedef std::regex_iterator<std::string::iterator> rgx_it;
 
+/**
+*	Program tokenize(std::string)
+*	takes a string containing the program to be tokenized
+*	outputs a structure representing the program
+*/
 Program tokenize(std::string program);
 
 std::ostream& operator<<(std::ostream& os, Program prog);

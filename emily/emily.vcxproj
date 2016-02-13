@@ -64,10 +64,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="keywords.cpp" />
+    <ClCompile Include="macro.cpp" />
     <ClCompile Include="tokenize.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="keywords.h" />
+    <ClInclude Include="macro.h" />
     <ClInclude Include="tokenize.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
