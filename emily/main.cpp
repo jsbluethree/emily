@@ -5,6 +5,7 @@
 #include "keywords.h"
 
 int main(int argc, char** argv){
+	using namespace emily;
 	Program prog = tokenize(R"(width = 80
 
 foreach ^upto ^perform = {
