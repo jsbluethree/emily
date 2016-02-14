@@ -4,6 +4,7 @@
 #define __MACRO_H__
 
 #include <algorithm>
+#include <iterator>
 #include "tokenize.h"
 
 // which direction to search lines for symbols
@@ -71,7 +72,7 @@ const Macro built_in_macros[] = {
 	{ Sweep::L, 90, "?", Transform::Question },
 	// Core
 	{ Sweep::L, 100, "^", Transform::ClosureConstruct },
-	{ Sweep::L, 100, "^@", Transform::ClosureConstruct, "" },
+	{ Sweep::L, 100, "^@", Transform::ClosureConstruct, "true" },
 	{ Sweep::L, 105, "=", Transform::Assignment },
 	{ Sweep::L, 110, ".", Transform::Atom },
 	// Pseudo-statement

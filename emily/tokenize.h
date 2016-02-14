@@ -5,6 +5,7 @@
 
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <list>
 #include <regex>
@@ -46,7 +47,7 @@ struct Token{
 };
 
 struct ClosureInfo{
-	std::vector<std::string> bindings;
+	std::vector<Token> bindings;
 	int group_idx;
 	bool has_return;
 };
@@ -64,6 +65,7 @@ struct Program{
 	std::vector<ClosureInfo> closures;
 
 	int intern(std::string str);
+	int sym(std::string str);
 };
 
 typedef std::regex_iterator<std::string::iterator> rgx_it;
@@ -79,5 +81,7 @@ Program tokenize(std::string program);
 std::ostream& operator<<(std::ostream& os, Program prog);
 
 void syntax_error(Token tok, const char* msg);
+
+char closer(char op);
 
 #endif

@@ -11,6 +11,15 @@ int Program::intern(std::string str){
 	return i;
 }
 
+// interns a symbol string, returning its index
+// TODO: check for non-symbol strings?
+int Program::sym(std::string str){
+	int i = std::find(symbols.begin(), symbols.end(), str) - symbols.begin();
+	if (i == symbols.size())
+		symbols.push_back(str);
+	return i;
+}
+
 /**
  *	Program tokenize(std::string)
  *	takes a string containing the program to be tokenized
@@ -70,6 +79,7 @@ Program tokenize(std::string program){
 		else if ((*rit)[Tok::String].length() > 0){
 			tok.type = Tok::String;
 			tok.index = prog.strings.size();
+			// TODO: check for escape sequences
 			prog.strings.push_back((*rit)[Tok::StringContent].str());
 			// check for newlines
 			int nls = count(rit->begin(), rit->end(), '\n');
@@ -81,14 +91,14 @@ Program tokenize(std::string program){
 		}
 		else if ((*rit)[Tok::Symbol].length() > 0){
 			tok.type = Tok::Symbol;
-			tok.index = prog.symbols.size();
-			prog.symbols.push_back(rit->str());
+			tok.index = prog.sym(rit->str());
 			prog.groups[curr_group.top()].back().push_back(tok);
 		}
 		else if ((*rit)[Tok::GroupOpen].length() > 0){
+			// TODO: elide redundant groups here?
 			tok.type = Tok::GroupOpen;
 			tok.index = prog.groups.size();
-			prog.group_kinds.push_back(*(program.c_str() + rit->position()));
+			prog.group_kinds.push_back(program[rit->position()]);
 			prog.groups[curr_group.top()].back().push_back(tok);
 			// add the new group to the list and push its index to the stack
 			curr_group.push(prog.groups.size());
@@ -96,8 +106,10 @@ Program tokenize(std::string program){
 			prog.groups.back().push_back(Line{});
 		}
 		else if ((*rit)[Tok::GroupClose].length() > 0){
-			// TODO: check that the group closer matches (impossible with the current setup?)
-			// TODO: check that the group closer is matched (stack.size() > 1)
+			if (program[rit->position()] != closer(prog.group_kinds[curr_group.top()])){
+				syntax_error(tok, "incorrect group closer");
+				return{};
+			}
 			if (curr_group.size() <= 1){
 				syntax_error(tok, "unmatched group closer");
 				return{};
@@ -153,11 +165,11 @@ std::ostream& operator<<(std::ostream& os, Program prog){
 					os << prog.words[tk.index];
 					break;
 				case Tok::GroupOpen:
-					os << prog.group_kinds[tk.index] << tk.index;
+					os << prog.group_kinds[tk.index] << tk.index << closer(prog.group_kinds[tk.index]);
 					break;
 				case Tok::GroupClose:
 					os << '^' << prog.group_kinds[prog.closures[tk.index].group_idx]
-					   << prog.closures[tk.index].group_idx;
+					   << prog.closures[tk.index].group_idx << closer(prog.group_kinds[prog.closures[tk.index].group_idx]);
 					break;
 				default:
 					os << "!ERROR!";
@@ -173,4 +185,13 @@ std::ostream& operator<<(std::ostream& os, Program prog){
 
 void syntax_error(Token tok, const char* msg){
 	std::cerr << "Syntax Error at (" << tok.line << ',' << tok.column << "): " << msg << std::endl;
+}
+
+char closer(char op){
+	switch (op){
+	case '(': return ')';
+	case '[': return ']';
+	case '{': return '}';
+	default:  return '\0';
+	}
 }
