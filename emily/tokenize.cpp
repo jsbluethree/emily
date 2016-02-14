@@ -87,7 +87,7 @@ namespace emily{
 				int nls = count(rit->begin(), rit->end(), '\n');
 				if (nls > 0){
 					line_number += nls;
-					line_offset = rit->position() + rit->str().rfind('\n') + 1;
+					line_offset = rit->position() + rit->str().rfind('\n');
 				}
 				prog.groups[curr_group.top().index].back().push_back(tok);
 			}

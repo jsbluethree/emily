@@ -46,6 +46,14 @@ foreach width ^at (
     if (at == next) ^( next = next * 2 )
 )
 repeatWith starting                                             # Begin)");
-	std::cout << prog;
+	try{
+		std::cout << prog;
+		std::cout << "\n=================================================\n";
+		do_macros(prog);
+		std::cout << prog;
+	}
+	catch (std::exception e){
+		std::cout << e.what();
+	}
 	std::cin.get();
 }

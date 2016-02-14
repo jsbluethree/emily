@@ -7,6 +7,7 @@ namespace emily{
 	// splits a line on , into a group of lines
 	// prefixes each line with this .append
 	bool macro_comma(Program& prog, Line& line){
+		// TODO: test for empty lines i.e. [1,,2]
 		// pull the line containing commas out of the structure
 		Line comma_line{ std::move(line) };
 		Token tok_this{ Tok::Word, prog.intern("this"), comma_line.front().line, comma_line.front().column };
@@ -58,7 +59,7 @@ namespace emily{
 		new_line.splice(new_line.begin(), line, exp, line.end());
 		// find location of closure bindings if any
 		CodePos clos = std::find_if(line.begin(), line.end(), [&prog](Token tok){
-			return tok.type == Tok::Symbol && prog.symbols[tok.index] == "^" || prog.symbols[tok.index] == "^@";
+			return tok.type == Tok::Symbol && (prog.symbols[tok.index] == "^" || prog.symbols[tok.index] == "^@");
 		});
 		// find location of key
 		CodePos key;
@@ -136,7 +137,7 @@ namespace emily{
 		Line old_line{ Token{ Tok::Word, prog.intern("tern"), tk->line, tk->column } };
 		old_line.swap(line);
 		// make sure there are no other ?s in the line
-		CodePos que = std::find_if(tk, old_line.end(), [&prog](Token tok){
+		CodePos que = std::find_if(std::next(tk), old_line.end(), [&prog](Token tok){
 			return tok.type == Tok::Symbol && prog.symbols[tok.index] == "?";
 		});
 		if (que != old_line.end()){
@@ -182,19 +183,19 @@ namespace emily{
 
 	// perform short circuit transform
 	// [exp1] OP [exp2] => op ^([exp1]) ^([exp2])
-	bool macro_short_circuit(Program& prog, Line& new_line, CodePos tk, const char* str){
+	bool macro_short_circuit(Program& prog, Line& line, CodePos tk, const char* str){
 		// pull the line out of the structure
 		Line old_line{ Token{ Tok::Word, prog.intern(str), tk->line, tk->column } };
-		old_line.swap(new_line);
+		old_line.swap(line);
 		// create new groups
 		// left group
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		new_line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ old_line.begin(), tk } });
 		prog.group_kinds.push_back('(');
 		// right group
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		new_line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ std::next(tk), old_line.end() } });
 		prog.group_kinds.push_back('(');
 		return true;
@@ -271,10 +272,147 @@ namespace emily{
 	// [exp1] OP [exp2] => not ( ([exp1]) .op ([exp2]) )
 	bool macro_splitter_inv(Program& prog, Line& line, CodePos tk, const char* str){
 		if (!macro_splitter(prog, line, tk, str)) return false;
+		prog.groups.push_back(Group{ Line{} });
+		prog.group_kinds.push_back('(');
+		Line& new_line = prog.groups.back().back();
+		new_line.splice(new_line.begin(), line);
+		line = Line{ Token{ Tok::Word, prog.intern("not"), tk->line, tk->column },
+			Token{ Tok::GroupOpen, prog.groups.size() - 1, tk->line, tk->column } };
+		return true;
+	}
+
+	// intended for unary -
+	// becomes .str_unary if in beginning of line or after another arithmetic symbol
+	// otherwise becomes .str_binary
+	bool macro_splitter_dual(Program& prog, Line& line, CodePos tk, const char* str_unary, const char* str_binary){
+		if (tk == line.begin())
+			return macro_unary(prog, line, tk, str_unary);
+		else if (std::prev(tk)->type == Tok::Symbol){
+			const std::string& sym = prog.symbols[std::prev(tk)->index];
+			if (sym == "*" || sym == "/" || sym == "%" || sym == "-" || sym == "+")
+				return macro_unary(prog, line, tk, str_unary);
+			else
+				return macro_splitter(prog, line, tk, str_binary);
+		}
+		else
+			return macro_splitter(prog, line, tk, str_binary);
+	}
+
+	// unary operator
+	// OP a => ((a) .op)
+	bool macro_unary(Program& prog, Line& line, CodePos tk, const char* str){
+		if (std::next(tk) == line.end()){
+			syntax_error(*tk, "expected something after unary operator");
+			return false;
+		}
+		Token operand = *std::next(tk);
+		line.erase(std::next(tk));
+		tk->type = Tok::GroupOpen;
+		tk->index = prog.groups.size();
+		prog.groups.push_back(Group{ Line{
+			Token{ Tok::GroupOpen, tk->index + 1, tk->line, tk->column },
+			Token{ Tok::Atom, prog.intern(str), tk->line, tk->column } }
+		});
+		prog.group_kinds.push_back('(');
+		prog.groups.push_back(Group{ Line{ operand } });
+		prog.group_kinds.push_back('(');
+		return true;
+	}
+
+	// prefix unary operator
+	// OP a => (op (a))
+	bool macro_unary_prefix(Program& prog, Line& line, CodePos tk, const char* str){
+		if (std::next(tk) == line.end()){
+			syntax_error(*tk, "expected something after unary operator");
+			return false;
+		}
+		Token operand = *std::next(tk);
+		line.erase(std::next(tk));
+		tk->type = Tok::GroupOpen;
+		tk->index = prog.groups.size();
+		prog.groups.push_back(Group{ Line{
+			Token{ Tok::Word, prog.intern(str), tk->line, tk->column },
+			Token{ Tok::GroupOpen, tk->index + 1, tk->line, tk->column } }
+		});
+		prog.group_kinds.push_back('(');
+		prog.groups.push_back(Group{ Line{ operand } });
+		prog.group_kinds.push_back('(');
+		return true;
+	}
+
+	// binary application
+	// ` a b => (a b)
+	bool macro_backtick(Program& prog, Line& line, CodePos tk){
+		if (std::next(tk) == line.end() || std::next(tk, 2) == line.end()){
+			syntax_error(*tk, "` must be followed by two tokens");
+			return false;
+		}
+		tk->type = Tok::GroupOpen;
+		tk->index = prog.groups.size();
+		prog.groups.push_back(Group{ Line{} });
+		prog.group_kinds.push_back('(');
+		Line& new_line = prog.groups.back().back();
+		new_line.splice(new_line.begin(), line, std::next(tk), std::next(tk, 3));
+		return true;
 	}
 
 	bool do_macros(Program& prog){
-		return false;
+		std::vector<Macro> macros{ built_in_macros.rbegin(), built_in_macros.rend() };
+		bool result = true;
+		for (size_t grp = 0; grp < prog.groups.size(); ++grp){
+			for (auto& line : prog.groups[grp]){
+				for (const auto& mac : macros){
+					auto is_op = [&mac, &prog](Token tok){
+						return tok.type == Tok::Symbol && prog.symbols[tok.index] == mac.sym;
+					};
+					CodePos pos;
+					// probably a better way to structure this loop
+					do{
+						switch (mac.swp){
+						case Sweep::L: pos = std::find_if(line.begin(), line.end(), is_op); break;
+						case Sweep::R: auto rpos = std::find_if(line.rbegin(), line.rend(), is_op);
+							pos = rpos == line.rend() ? line.end() : std::prev(rpos.base());
+						}
+						if (pos != line.end()){
+							switch (mac.fn){
+							case Transform::Comma:
+								result &= macro_comma(prog, line); break;
+							case Transform::Atom:
+								result &= macro_atom(prog, line, pos); break;
+							case Transform::Assignment:
+								result &= macro_assign(prog, line, pos); break;
+							case Transform::ClosureConstruct:
+								result &= macro_closure(prog, line, pos, mac.args[0] != nullptr); break;
+							case Transform::Question:
+								result &= macro_question(prog, line, pos); break;
+							case Transform::ApplyRight:
+								result &= macro_apply_right(prog, line, pos); break;
+							case Transform::MakeShortCircuit:
+								result &= macro_short_circuit(prog, line, pos, mac.args[0]); break;
+							case Transform::Ifndef:
+								result &= macro_ifndef(prog, line, pos); break;
+							case Transform::MakeSplitter:
+								result &= macro_splitter(prog, line, pos, mac.args[0]); break;
+							case Transform::MakeSplitterInvert:
+								result &= macro_splitter_inv(prog, line, pos, mac.args[0]); break;
+							case Transform::MakeDualModeSplitter:
+								result &= macro_splitter_dual(prog, line, pos, mac.args[0], mac.args[1]); break;
+							case Transform::MakeUnary:
+								result &= macro_unary(prog, line, pos, mac.args[0]); break;
+							case Transform::MakePrefixUnary:
+								result &= macro_unary_prefix(prog, line, pos, mac.args[0]); break;
+							case Transform::Backtick:
+								result &= macro_backtick(prog, line, pos); break;
+							case Transform::UserDefined: break; // not implemented
+							}
+							// set the iterator to a known value since it may have been invalidated
+							pos = line.begin();
+						}
+					} while (pos != line.end());
+				}
+			}
+		}
+		return result;
 	}
 
 }
