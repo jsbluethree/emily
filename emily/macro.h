@@ -81,20 +81,20 @@ namespace emily{
 		{ Sweep::L, 150, ",", Transform::Comma }
 	};
 
-	bool macro_comma(Program& prog, int grp, int ln);
-	bool macro_atom(Program& prog, int grp, int ln, CodePos tk);
-	bool macro_assign(Program& prog, int grp, int ln, CodePos tk);
-	bool macro_closure(Program& prog, int grp, int ln, CodePos tk, bool ret);
-	bool macro_question(Program& prog, int grp, int ln, CodePos tk);
-	bool macro_apply_right(Program& prog, int grp, int ln, CodePos tk);
-	bool macro_short_circuit(Program& prog, int grp, int ln, CodePos tk, const char* str);
-	bool macro_ifndef(Program& prog, int grp, int ln, CodePos tk);
-	bool macro_splitter(Program& prog, int grp, int ln, CodePos tk, const char* str);
-	bool macro_splitter_inv(Program& prog, int grp, int ln, CodePos tk, const char* str);
-	bool macro_splitter_dual(Program& prog, int grp, int ln, CodePos tk, const char* str1, const char* str2);
-	bool macro_unary(Program& prog, int grp, int ln, CodePos tk, const char* str);
-	bool macro_unary_prefix(Program& prog, int grp, int ln, CodePos tk, const char* str);
-	bool macro_backtick(Program& prog, int grp, int ln, CodePos tk);
+	bool macro_comma(Program& prog, Line& line);
+	bool macro_atom(Program& prog, Line& line, CodePos tk);
+	bool macro_assign(Program& prog, Line& line, CodePos tk);
+	bool macro_closure(Program& prog, Line& line, CodePos tk, bool ret);
+	bool macro_question(Program& prog, Line& line, CodePos tk);
+	bool macro_apply_right(Program& prog, Line& line, CodePos tk);
+	bool macro_short_circuit(Program& prog, Line& line, CodePos tk, const char* str);
+	bool macro_ifndef(Program& prog, Line& line, CodePos tk);
+	bool macro_splitter(Program& prog, Line& line, CodePos tk, const char* str);
+	bool macro_splitter_inv(Program& prog, Line& line, CodePos tk, const char* str);
+	bool macro_splitter_dual(Program& prog, Line& line, CodePos tk, const char* str1, const char* str2);
+	bool macro_unary(Program& prog, Line& line, CodePos tk, const char* str);
+	bool macro_unary_prefix(Program& prog, Line& line, CodePos tk, const char* str);
+	bool macro_backtick(Program& prog, Line& line, CodePos tk);
 
 	bool do_macros(Program& prog);
 
