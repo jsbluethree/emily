@@ -14,7 +14,7 @@ namespace emily{
 		"eq", "null", "true", "print", "println", "ln", "sp", "do", "loop", "if", "while",
 		"not", "and", "or", "xor", "nullfn", "tern", "append", "each", "negate", "add",
 		"minus", "times", "divide", "mod", "lt", "lte", "gt", "gte", "thisTransplant",
-		"thisFreeze", "thisInit", "thisUpdate", "check", "scope"
+		"thisFreeze", "thisInit", "thisUpdate", "check", "scope", "!type"
 	};
 
 }

@@ -3,57 +3,26 @@
 #include "tokenize.h"
 #include "macro.h"
 #include "keywords.h"
+#include "memory.h"
 
 int main(int argc, char** argv){
 	using namespace emily;
-	Program prog = tokenize(R"(width = 80
+	using namespace std;
 
-foreach ^upto ^perform = {
-    counter = 0
-    while ^(counter < upto) ^( perform counter; counter = counter + 1; )
-}
+	MemoryManager mem;
 
-inherit ^class = [ parent = class ]
+	Value s = mem.create(ValType::String);
 
-line = [                               # Object for one line of printout
-    createFrom ^old = {
-        foreach width ^at { # Rule 135
-            final = width - 1
-            here   = old at
-            before = old ( at == 0 ? final : at - 1 )
-            after  = old ( at == final ? 0 : at + 1 )
-            this.append: ( here && before && after ) \
-                     || !( here || before || after )
-        }
-    }
-    print ^ = {
-        this.each ^cell { print: cell ? "*" : " " }
-        println ""                                          # Next line
-    }
-]
+	mem.get<string>(s) = "String! ";
 
-repeatWith ^old = {  # Repeatedly print a line, then generate a new one
-    do: old.print
-    new = inherit line
-    new.createFrom old
-    repeatWith new
-}
+	std::cout << mem.get<string>(s);
 
-starting = inherit line        # Create a starting line full of garbage
-next = 1
-foreach width ^at (
-    starting.append: at != next
-    if (at == next) ^( next = next * 2 )
-)
-repeatWith starting                                             # Begin)");
 	try{
-		std::cout << prog;
-		std::cout << "\n=================================================\n";
-		do_macros(prog);
-		std::cout << prog;
+		std::cout << mem.get<Table>(s).size();
 	}
-	catch (std::exception e){
+	catch (exception e){
 		std::cout << e.what();
 	}
+	
 	std::cin.get();
 }

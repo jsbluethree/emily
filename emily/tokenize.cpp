@@ -148,7 +148,8 @@ namespace emily{
 	std::ostream& operator<<(std::ostream& os, Program prog){
 		int g = 0;
 		for (const auto& group : prog.groups){
-			os << g++ << ":\n";
+			os << prog.group_kinds[g] << g << closer(prog.group_kinds[g]) << ":\n";
+			++g;
 			for (const auto& ln : group){
 				for (auto tk : ln){
 					switch (tk.type){

@@ -65,13 +65,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="macro.cpp" />
+    <ClCompile Include="memory.cpp" />
     <ClCompile Include="tokenize.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="values.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="keywords.h" />
     <ClInclude Include="macro.h" />
+    <ClInclude Include="memory.h" />
     <ClInclude Include="tokenize.h" />
+    <ClInclude Include="values.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

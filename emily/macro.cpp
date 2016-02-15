@@ -358,6 +358,7 @@ namespace emily{
 
 	bool do_macros(Program& prog){
 		std::vector<Macro> macros{ built_in_macros.rbegin(), built_in_macros.rend() };
+		// TODO (maybe): add user defined macros, then stable sort
 		bool result = true;
 		for (size_t grp = 0; grp < prog.groups.size(); ++grp){
 			for (auto& line : prog.groups[grp]){
