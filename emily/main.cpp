@@ -9,20 +9,49 @@ int main(int argc, char** argv){
 	using namespace emily;
 	using namespace std;
 
-	MemoryManager mem;
+	Program prog = tokenize(R"(width = 80
 
-	Value s = mem.create(ValType::String);
+foreach ^upto ^perform = {
+    counter = 0
+    while ^(counter < upto) ^( perform counter; counter = counter + 1; )
+}
 
-	mem.get<string>(s) = "String! ";
+inherit ^class = [ parent = class ]
 
-	std::cout << mem.get<string>(s);
+line = [                               # Object for one line of printout
+    createFrom ^old = {
+        foreach width ^at { # Rule 135
+            final = width - 1
+            here   = old at
+            before = old ( at == 0 ? final : at - 1 )
+            after  = old ( at == final ? 0 : at + 1 )
+            this.append: ( here && before && after ) \
+                     || !( here || before || after )
+        }
+    }
+    print ^ = {
+        this.each ^cell { print: cell ? "*" : " " }
+        println ""                                          # Next line
+    }
+]
 
-	try{
-		std::cout << mem.get<Table>(s).size();
-	}
-	catch (exception e){
-		std::cout << e.what();
-	}
-	
+repeatWith ^old = {  # Repeatedly print a line, then generate a new one
+    do: old.print
+    new = inherit line
+    new.createFrom old
+    repeatWith new
+}
+
+starting = inherit line        # Create a starting line full of garbage
+next = 1
+foreach width ^at (
+    starting.append: at != next
+    if (at == next) ^( next = next * 2 )
+)
+repeatWith starting                                             # Begin)");
+
+	do_macros(prog);
+	elide_groups(prog);
+	std::cout << prog;
 	std::cin.get();
 }

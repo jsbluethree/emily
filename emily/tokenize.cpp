@@ -38,7 +38,7 @@ namespace emily{
 		prog.words = keywords;
 		// set up stack to track current group
 		stack<Token> curr_group{};
-		curr_group.push(Token{ Tok::GroupOpen, 0, 0, 0 });
+		curr_group.push(Token{ Tok::Group, 0, 0, 0 });
 		// track line and column number for debugging info
 		int line_number = 1;
 		int line_offset = 0;
@@ -96,9 +96,9 @@ namespace emily{
 				tok.index = prog.sym(rit->str());
 				prog.groups[curr_group.top().index].back().push_back(tok);
 			}
-			else if ((*rit)[Tok::GroupOpen].length() > 0){
+			else if ((*rit)[Tok::Group].length() > 0){
 				// TODO: elide redundant groups here?
-				tok.type = Tok::GroupOpen;
+				tok.type = Tok::Group;
 				tok.index = prog.groups.size();
 				prog.group_kinds.push_back(program[rit->position()]);
 				prog.groups[curr_group.top().index].back().push_back(tok);
@@ -148,7 +148,8 @@ namespace emily{
 	std::ostream& operator<<(std::ostream& os, Program prog){
 		int g = 0;
 		for (const auto& group : prog.groups){
-			os << prog.group_kinds[g] << g << closer(prog.group_kinds[g]) << ":\n";
+			if (!group.empty())
+				os << prog.group_kinds[g] << g << closer(prog.group_kinds[g]) << ":\n";
 			++g;
 			for (const auto& ln : group){
 				for (auto tk : ln){
@@ -167,10 +168,10 @@ namespace emily{
 					case Tok::Word:
 						os << prog.words[tk.index];
 						break;
-					case Tok::GroupOpen:
+					case Tok::Group:
 						os << prog.group_kinds[tk.index] << tk.index << closer(prog.group_kinds[tk.index]);
 						break;
-					case Tok::GroupClose:
+					case Tok::Closure:
 						os << '^' << prog.group_kinds[prog.closures[tk.index].group_idx]
 							<< prog.closures[tk.index].group_idx << closer(prog.group_kinds[prog.closures[tk.index].group_idx]);
 						break;
@@ -186,8 +187,9 @@ namespace emily{
 		return os;
 	}
 
-	void syntax_error(Token tok, const char* msg){
+	void syntax_error(Token& tok, const char* msg){
 		std::cerr << "Syntax Error at (" << tok.line << ',' << tok.column << "): " << msg << std::endl;
+		tok.type = Tok::Error;
 	}
 
 	char closer(char op){

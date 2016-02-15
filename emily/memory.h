@@ -9,6 +9,10 @@
 
 namespace emily{
 
+	/**	Memory pool class
+	 *	allocates new objects and associates them w/ an index by storing them in a vector
+	 *	objects are reference counted
+	 */
 	template <typename T, ValType V>
 	class MemPool{
 		std::vector<T> items;
@@ -30,6 +34,10 @@ namespace emily{
 		T& operator[](Value val);
 	};
 
+	/**	Memory manager class
+	 *	keeps a memory pool for each managed type
+	 *	TODO: probably intern builtin functions somewhere else
+	 */
 	class MemoryManager{
 		MemPool<std::string, ValType::String> strings;
 		MemPool<BuiltinClosure, ValType::BuiltinClosure> builtinClosures;
@@ -40,7 +48,7 @@ namespace emily{
 
 	public:
 		Value create(ValType v);
-		void ref(Value val);
+		Value ref(Value val);
 		int refcount(Value val) const;
 		void deref(Value val);
 		void free(Value val);

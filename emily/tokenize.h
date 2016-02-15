@@ -27,7 +27,7 @@ namespace emily{
 			Word,
 			String,
 			StringContent,
-			GroupOpen,
+			Group,
 			GroupClose,
 			Newline,
 			Comment,
@@ -36,7 +36,9 @@ namespace emily{
 			Symbol,
 			Whitespace,
 			Unrecognized,
-			Atom
+			Atom,
+			Closure,
+			Error
 		};
 	}
 
@@ -79,10 +81,14 @@ namespace emily{
 	*/
 	Program tokenize(std::string program);
 
+	// outputs program structure in a semi-readable form
 	std::ostream& operator<<(std::ostream& os, Program prog);
 
-	void syntax_error(Token tok, const char* msg);
+	// prints an error message and changes the type of tok to Error
+	void syntax_error(Token& tok, const char* msg);
 
+	// maps group openers to appropriate closers
+	// maps all other characters to null
 	char closer(char op);
 
 }

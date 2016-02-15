@@ -12,7 +12,7 @@ namespace emily{
 		Line comma_line{ std::move(line) };
 		Token tok_this{ Tok::Word, prog.intern("this"), comma_line.front().line, comma_line.front().column };
 		Token tok_append{ Tok::Atom, prog.intern("append"), comma_line.front().line, comma_line.front().column };
-		line = Line{ Token{ Tok::GroupOpen, prog.groups.size(), comma_line.front().line, comma_line.front().column } };
+		line = Line{ Token{ Tok::Group, prog.groups.size(), comma_line.front().line, comma_line.front().column } };
 		prog.groups.push_back(Group{});
 		prog.group_kinds.push_back('(');
 		prog.groups.back().push_back(Line{ tok_this, tok_append });
@@ -54,7 +54,7 @@ namespace emily{
 		// move the [exp] part into a new () group
 		prog.groups.push_back(Group{ Line{} });
 		prog.group_kinds.push_back('(');
-		line.insert(exp, Token{ Tok::GroupOpen, prog.groups.size() - 1, tk->line, tk->column });
+		line.insert(exp, Token{ Tok::Group, prog.groups.size() - 1, tk->line, tk->column });
 		Line& new_line = prog.groups.back().back();
 		new_line.splice(new_line.begin(), line, exp, line.end());
 		// find location of closure bindings if any
@@ -89,7 +89,7 @@ namespace emily{
 		ClosureInfo clos{};
 		clos.has_return = ret;
 		// consume tokens until a group is found
-		while (tk != line.end() && tk->type != Tok::GroupOpen){
+		while (tk != line.end() && tk->type != Tok::Group){
 			switch (tk->type){
 			case Tok::Symbol:
 				if (prog.symbols[tk->index] == "^" || prog.symbols[tk->index] == "^@"){
@@ -124,7 +124,7 @@ namespace emily{
 		}
 		// turn the token into a closure token and push the closure info
 		clos.group_idx = tk->index;
-		tk->type = Tok::GroupClose;
+		tk->type = Tok::Closure;
 		tk->index = prog.closures.size();
 		prog.closures.push_back(clos);
 		return true;
@@ -154,17 +154,17 @@ namespace emily{
 		}
 		// create new groups
 		// condition group:
-		line.push_back(Token{ Tok::GroupOpen, prog.groups.size(), tk->line, tk->column });
+		line.push_back(Token{ Tok::Group, prog.groups.size(), tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ old_line.begin(), tk } });
 		prog.group_kinds.push_back('(');
 		// statement 1:
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::Closure, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ std::next(tk), colon } });
 		prog.group_kinds.push_back('(');
 		// statement 2:
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::Closure, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ std::next(colon), old_line.end() } });
 		prog.group_kinds.push_back('(');
 		return true;
@@ -172,7 +172,7 @@ namespace emily{
 
 	// group all tokens to the right
 	bool macro_apply_right(Program& prog, Line& line, CodePos tk){
-		line.insert(tk, Token{ Tok::GroupOpen, prog.groups.size(), tk->line, tk->column });
+		line.insert(tk, Token{ Tok::Group, prog.groups.size(), tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{} });
 		prog.group_kinds.push_back('(');
 		Line& new_line = prog.groups.back().back();
@@ -190,12 +190,12 @@ namespace emily{
 		// create new groups
 		// left group
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::Closure, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ old_line.begin(), tk } });
 		prog.group_kinds.push_back('(');
 		// right group
 		prog.closures.push_back(ClosureInfo{ {}, prog.groups.size(), false });
-		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tk->line, tk->column });
+		line.push_back(Token{ Tok::Closure, prog.closures.size() - 1, tk->line, tk->column });
 		prog.groups.push_back(Group{ Line{ std::next(tk), old_line.end() } });
 		prog.group_kinds.push_back('(');
 		return true;
@@ -208,7 +208,7 @@ namespace emily{
 	bool macro_ifndef(Program& prog, Line& line, CodePos tk){
 		Token tok = *tk;
 		if (tk == line.begin()){
-			syntax_error(tok, "nothing found left of // operator");
+			syntax_error(*tk, "nothing found left of // operator");
 			return false;
 		}
 		// construct the closure at the end first
@@ -218,7 +218,7 @@ namespace emily{
 		Line& new_line = prog.groups.back().back();
 		new_line.splice(new_line.begin(), line, std::next(tk), line.end());
 		line.erase(tk);
-		line.push_back(Token{ Tok::GroupClose, prog.closures.size() - 1, tok.line, tok.column });
+		line.push_back(Token{ Tok::Closure, prog.closures.size() - 1, tok.line, tok.column });
 		CodePos word = std::prev(line.end(), 2);
 		if (word == line.begin()){
 			if (word->type != Tok::Word){
@@ -233,7 +233,7 @@ namespace emily{
 			prog.group_kinds.push_back('(');
 			Line& newer_line = prog.groups.back().back();
 			newer_line.splice(newer_line.begin(), line, line.begin(), word);
-			line.push_front(Token{ Tok::GroupOpen, prog.groups.size() - 1, tok.line, tok.column });
+			line.push_front(Token{ Tok::Group, prog.groups.size() - 1, tok.line, tok.column });
 		}
 		line.push_front(Token{ Tok::Word, prog.intern("check"), tok.line, tok.column });
 		return true;
@@ -255,13 +255,13 @@ namespace emily{
 		prog.group_kinds.push_back('(');
 		Line& left_line = prog.groups.back().back();
 		left_line.splice(left_line.begin(), line, line.begin(), tk);
-		line.push_front(Token{ Tok::GroupOpen, prog.groups.size() - 1, left_line.front().line, left_line.front().column });
+		line.push_front(Token{ Tok::Group, prog.groups.size() - 1, left_line.front().line, left_line.front().column });
 		// create right group
 		prog.groups.push_back(Group{ Line{} });
 		prog.group_kinds.push_back('(');
 		Line& right_line = prog.groups.back().back();
 		right_line.splice(right_line.begin(), line, std::next(tk), line.end());
-		line.push_back(Token{ Tok::GroupOpen, prog.groups.size() - 1, right_line.front().line, right_line.front().column });
+		line.push_back(Token{ Tok::Group, prog.groups.size() - 1, right_line.front().line, right_line.front().column });
 		// change symbol to atom
 		tk->type = Tok::Atom;
 		tk->index = prog.intern(str);
@@ -277,7 +277,7 @@ namespace emily{
 		Line& new_line = prog.groups.back().back();
 		new_line.splice(new_line.begin(), line);
 		line = Line{ Token{ Tok::Word, prog.intern("not"), tk->line, tk->column },
-			Token{ Tok::GroupOpen, prog.groups.size() - 1, tk->line, tk->column } };
+			Token{ Tok::Group, prog.groups.size() - 1, tk->line, tk->column } };
 		return true;
 	}
 
@@ -307,10 +307,10 @@ namespace emily{
 		}
 		Token operand = *std::next(tk);
 		line.erase(std::next(tk));
-		tk->type = Tok::GroupOpen;
+		tk->type = Tok::Group;
 		tk->index = prog.groups.size();
 		prog.groups.push_back(Group{ Line{
-			Token{ Tok::GroupOpen, tk->index + 1, tk->line, tk->column },
+			Token{ Tok::Group, tk->index + 1, tk->line, tk->column },
 			Token{ Tok::Atom, prog.intern(str), tk->line, tk->column } }
 		});
 		prog.group_kinds.push_back('(');
@@ -328,11 +328,11 @@ namespace emily{
 		}
 		Token operand = *std::next(tk);
 		line.erase(std::next(tk));
-		tk->type = Tok::GroupOpen;
+		tk->type = Tok::Group;
 		tk->index = prog.groups.size();
 		prog.groups.push_back(Group{ Line{
 			Token{ Tok::Word, prog.intern(str), tk->line, tk->column },
-			Token{ Tok::GroupOpen, tk->index + 1, tk->line, tk->column } }
+			Token{ Tok::Group, tk->index + 1, tk->line, tk->column } }
 		});
 		prog.group_kinds.push_back('(');
 		prog.groups.push_back(Group{ Line{ operand } });
@@ -347,7 +347,7 @@ namespace emily{
 			syntax_error(*tk, "` must be followed by two tokens");
 			return false;
 		}
-		tk->type = Tok::GroupOpen;
+		tk->type = Tok::Group;
 		tk->index = prog.groups.size();
 		prog.groups.push_back(Group{ Line{} });
 		prog.group_kinds.push_back('(');
@@ -366,9 +366,9 @@ namespace emily{
 					auto is_op = [&mac, &prog](Token tok){
 						return tok.type == Tok::Symbol && prog.symbols[tok.index] == mac.sym;
 					};
-					CodePos pos;
 					// probably a better way to structure this loop
-					do{
+					for (;;) {
+						CodePos pos;
 						switch (mac.swp){
 						case Sweep::L: pos = std::find_if(line.begin(), line.end(), is_op); break;
 						case Sweep::R: auto rpos = std::find_if(line.rbegin(), line.rend(), is_op);
@@ -409,11 +409,36 @@ namespace emily{
 							// set the iterator to a known value since it may have been invalidated
 							pos = line.begin();
 						}
-					} while (pos != line.end());
+						if (pos == line.end()) break;
+					}
+				}
+				for (auto& tok : line){
+					if (tok.type == Tok::Symbol){
+						syntax_error(tok, "unrecognized symbol");
+						result = false;
+					}
 				}
 			}
 		}
 		return result;
 	}
 
+	void elide_groups(Program& prog){
+		for (auto& group : prog.groups){
+			for (auto& line : group){
+				for (auto& token : line){
+					while (token.type == Tok::Group){
+						if (prog.group_kinds[token.index] == '(' &&
+							prog.groups[token.index].size() == 1 && 
+							prog.groups[token.index].back().size() == 1){
+							int i = token.index;
+							token = prog.groups[i].back().back();
+							prog.groups[i].clear();
+						}
+						else break;
+					}
+				}
+			}
+		}
+	}
 }

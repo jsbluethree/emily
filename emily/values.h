@@ -16,7 +16,7 @@ namespace emily{
 		True,
 		// simple type: value stored in place
 		Number,
-		// value indexed from program structure
+		// value interned in program structure
 		Atom,
 		// complex values: memory needs to be managed
 		String,

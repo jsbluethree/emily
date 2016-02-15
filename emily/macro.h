@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <iterator>
+#include <queue>
+#include <vector>
 #include "tokenize.h"
 
 namespace emily{
@@ -32,7 +34,8 @@ namespace emily{
 		UserDefined
 	};
 
-	/**	structure for macro transforms
+	/**	
+	 *	structure for macro transforms
 	 *	for user defined macros, use args[0] to designate function and args[1] for args to it?
 	 *	user defined stuff to be implemented later
 	 */
@@ -81,6 +84,11 @@ namespace emily{
 		Macro{ Sweep::L, 150, ",", Transform::Comma }
 	};
 
+
+	// macro functions
+	// each function transforms a line
+	// a return value of true indicates success with no errors
+	// a return value of false indicates a syntax error
 	bool macro_comma(Program& prog, Line& line);
 	bool macro_atom(Program& prog, Line& line, CodePos tk);
 	bool macro_assign(Program& prog, Line& line, CodePos tk);
@@ -96,7 +104,13 @@ namespace emily{
 	bool macro_unary_prefix(Program& prog, Line& line, CodePos tk, const char* str);
 	bool macro_backtick(Program& prog, Line& line, CodePos tk);
 
+	// for each line in prog, performs each macro in order of descending priority
+	// returns true if all macros succeeded without errors
+	// returns false if any macros encountered a syntax error
 	bool do_macros(Program& prog);
+
+	// removes unnecessary plain groups containing single tokens
+	void elide_groups(Program& prog);
 
 }
 
